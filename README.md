@@ -145,7 +145,7 @@ your-project/
 - **core-plugins.json**: Enabled core plugins list
 - **community-plugins.json**: Enabled community plugins list
 
-## 🔧 How It Works
+## How It Works
 
 ### New Installation Flow
 
@@ -204,7 +204,7 @@ CORE_PLUGINS=("templates" "file-explorer" "search" "quick-switcher" "command-pal
 
 The script creates basic configurations. To customize, edit the JSON templates in the `create_basic_config()` function.
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
