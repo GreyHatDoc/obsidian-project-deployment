@@ -224,14 +224,14 @@ create_gitignore() {
             echo "# Obsidian"
             echo "# Ignore workspace files but keep configuration"
             for pattern in "${obsidian_ignore_patterns[@]}"; do
-                echo "$pattern"
+                echo "\n$pattern"
             done
         } > "$gitignore_file"
     else
         print_info "Updating existing .gitignore file"
         for pattern in "${obsidian_ignore_patterns[@]}"; do
             if ! grep -q "^$pattern$" "$gitignore_file"; then
-                echo "$pattern" >> "$gitignore_file"
+                echo "\n$pattern" >> "$gitignore_file"
             fi
         done
     fi
