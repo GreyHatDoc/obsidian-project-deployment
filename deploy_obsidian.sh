@@ -214,7 +214,7 @@ create_gitignore() {
     
     local gitignore_file="$ROOT_PATH/.gitignore"
     local obsidian_ignore_patterns=(
-        ".obsidian/
+        ".obsidian/"
     )
     
     # Create or update .gitignore
