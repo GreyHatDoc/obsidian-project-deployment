@@ -16,10 +16,28 @@ $REQUIRED_PLUGINS = @("snippet-expander", "hotkey-tag-navigator")
 $CORE_PLUGINS = @("templates", "file-explorer", "search", "quick-switcher", "command-palette")
 
 # Color output functions
-function Print-Info { Write-Host "[INFO] $($_)" -ForegroundColor Blue }
-function Print-Success { Write-Host "[SUCCESS] $($_)" -ForegroundColor Green }
-function Print-Warning { Write-Host "[WARNING] $($_)" -ForegroundColor Yellow }
-function Print-Error { Write-Host "[ERROR] $($_)" -ForegroundColor Red }
+function Print-Info {
+    param([string]$Message)
+    # Colored host output for interactive sessions
+    Write-Host "[INFO] $Message" -ForegroundColor Blue
+    # Also emit to STDOUT so output can be redirected/captured
+    Write-Output "[INFO] $Message"
+}
+function Print-Success {
+    param([string]$Message)
+    Write-Host "[SUCCESS] $Message" -ForegroundColor Green
+    Write-Output "[SUCCESS] $Message"
+}
+function Print-Warning {
+    param([string]$Message)
+    Write-Host "[WARNING] $Message" -ForegroundColor Yellow
+    Write-Output "[WARNING] $Message"
+}
+function Print-Error {
+    param([string]$Message)
+    Write-Host "[ERROR] $Message" -ForegroundColor Red
+    Write-Output "[ERROR] $Message"
+}
 
 # Cleanup function
 function Cleanup {
