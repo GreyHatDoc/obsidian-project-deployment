@@ -2,7 +2,7 @@
 
 # Script configuration
 $FOLDER_PATH = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ROOT_PATH = (Get-Item $FOLDER_PATH).FullName
+$ROOT_PATH = Split-Path -Parent $FOLDER_PATH
 $NEW_INSTALLATION = $false
 $TEMP_DIR = Join-Path $ROOT_PATH "temp_obsidian_setup"
 $OBSIDIAN_DIR = Join-Path $ROOT_PATH ".obsidian"
@@ -155,7 +155,7 @@ function Setup-Community-Plugins {
         # Update existing community-plugins.json
         Print-Info "Updating existing community plugins configuration..."
         foreach ($plugin in $REQUIRED_PLUGINS) {
-            if (-not (Select-String -Path $communityPluginsFile -Pattern "\"$plugin\"")) {
+            if (-not (Select-String -Path $communityPluginsFile -Pattern "`"$plugin`"" -SimpleMatch)) {
                 Print-Info "Adding $plugin to community-plugins.json"
                 $tempFile = [System.IO.Path]::GetTempFileName()
                 (Get-Content $communityPluginsFile) | ForEach-Object { $_ -replace ']', ", `"$plugin`"]" } | Set-Content -Path $tempFile
@@ -175,7 +175,7 @@ function Install-Plugins {
             if ($_.PSIsContainer) {
                 $pluginName = $_.Name
                 Print-Info "Installing plugin: $pluginName"
-                Copy-Item -Path $_.FullName -Destination $PLUGINS_DIR -Recurse
+                Copy-Item -Path $_.FullName -Destination $PLUGINS_DIR -Recurse -Force
             }
         }
         Print-Success "Plugins installed successfully"
@@ -192,21 +192,36 @@ function Install-Templates {
     
     if (Test-Path $templateInstaller) {
         Print-Info "Using local template installer"
-        & $templateInstaller -Folder "Project" -Path $ROOT_PATH
+        try {
+            & $templateInstaller -Folder "Project" -Path $ROOT_PATH 2>$null
+        } catch {
+            Print-Warning "Local template installer encountered an error: $_"
+        }
     } elseif (Test-Path (Join-Path $TEMP_DIR "obsidian-templates")) {
         Print-Info "Installing templates from downloaded repository"
         # Move templates to root directory
-        Copy-Item -Path (Join-Path $TEMP_DIR "obsidian-templates") -Destination $ROOT_PATH -Recurse
+        Copy-Item -Path (Join-Path $TEMP_DIR "obsidian-templates") -Destination $ROOT_PATH -Recurse -Force
         
         # Try to run installer if it exists
-        $downloadedInstaller = Join-Path $ROOT_PATH "obsidian-templates" "install_templates.ps1"
+        $downloadedInstaller = Join-Path (Join-Path $ROOT_PATH "obsidian-templates") "install_templates.ps1"
         if (Test-Path $downloadedInstaller) {
-            & $downloadedInstaller -Folder "Project"
+            Print-Info "Running downloaded template installer..."
+            try {
+                & $downloadedInstaller -Folder "Project" 2>$null
+            } catch {
+                Print-Warning "Template installer had issues, falling back to manual installation"
+                # Manual template installation as fallback
+                New-Item -ItemType Directory -Path $TEMPLATES_DIR -Force | Out-Null
+                if (Test-Path (Join-Path (Join-Path $ROOT_PATH "obsidian-templates") "Templates")) {
+                    Copy-Item -Path (Join-Path (Join-Path $ROOT_PATH "obsidian-templates") "Templates\*") -Destination $TEMPLATES_DIR -Force
+                    Print-Success "Templates installed manually (fallback)"
+                }
+            }
         } else {
             # Manual template installation
             New-Item -ItemType Directory -Path $TEMPLATES_DIR -Force | Out-Null
-            if (Test-Path (Join-Path $ROOT_PATH "obsidian-templates" "Templates")) {
-                Copy-Item -Path (Join-Path $ROOT_PATH "obsidian-templates" "Templates\*") -Destination $TEMPLATES_DIR
+            if (Test-Path (Join-Path (Join-Path $ROOT_PATH "obsidian-templates") "Templates")) {
+                Copy-Item -Path (Join-Path (Join-Path $ROOT_PATH "obsidian-templates") "Templates\*") -Destination $TEMPLATES_DIR -Force
                 Print-Success "Templates installed manually"
             }
         }
@@ -228,7 +243,7 @@ function Create-GitIgnore {
     } else {
         Print-Info "Updating existing .gitignore file"
         foreach ($pattern in $obsidianIgnorePatterns) {
-            if (-not (Select-String -Path $gitignoreFile -Pattern "^$pattern$")) {
+            if (-not (Select-String -Path $gitignoreFile -Pattern $pattern -SimpleMatch)) {
                 Add-Content -Path $gitignoreFile -Value $pattern
             }
         }
@@ -279,7 +294,7 @@ function New-Installation {
     # Copy pre-existing .obsidian folder if it exists in the deployment directory
     if (Test-Path (Join-Path $FOLDER_PATH ".obsidian")) {
         Print-Info "Found pre-configured .obsidian folder, using as template..."
-        Copy-Item -Path (Join-Path $FOLDER_PATH ".obsidian\*") -Destination $OBSIDIAN_DIR -Recurse
+        Copy-Item -Path (Join-Path $FOLDER_PATH ".obsidian\*") -Destination $OBSIDIAN_DIR -Recurse -Force
     }
     
     Install-Plugins
@@ -328,12 +343,23 @@ This script will:
 
 function Main {
     param (
+        [Alias("h")]
+        [switch]$Help,
+        [Alias("f")]
         [switch]$ForceNew,
+        [Alias("t")]
         [switch]$TemplatesOnly,
+        [Alias("p")]
         [switch]$PluginsOnly,
         [switch]$NoGit,
         [switch]$NoCleanup
     )
+    
+    # Show help if requested
+    if ($Help) {
+        Show-Help
+        return
+    }
     
     # Override cleanup if requested
     if ($NoCleanup) {
